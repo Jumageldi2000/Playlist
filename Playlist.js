@@ -2,21 +2,18 @@
 import React, { useState, useEffect } from 'react';
 import PlaylistCard from './PlaylistCard';
 
-const MAX_PLAYLIST_SIZE = 10; // 限制最多 10 个音频
+const MAX_PLAYLIST_SIZE = 10; // Maximum of 10 audio items allowed
 
-const Playlist = ({ playlist, setPlaylist, onPlay, currentAudio, leftDuration, onTotalRemainingTime  }) => {
+const Playlist = ({ playlist, setPlaylist, onPlay, currentAudio, leftDuration, onTotalRemainingTime }) => {
+  const [draggingItem, setDraggingItem] = useState(null); // Item being dragged
+  const [dragOverIndex, setDragOverIndex] = useState(null); // Index of the drag target
+  const [dragOverPosition, setDragOverPosition] = useState(null); // Whether the mouse is above or below the target
 
-  const [draggingItem, setDraggingItem] = useState(null);   // 🎯 拖拽中的项目
-  const [dragOverIndex, setDragOverIndex] = useState(null); // 🎯 当前拖拽目标索引
-  const [dragOverPosition, setDragOverPosition] = useState(null); // ⬆️⬇️ 记录鼠标是在上方还是下方
-
-
-
-  // 🎯 计算剩余时间
+  // Calculate remaining time for the playlist
   const calculateRemainingTime = () => {
     if (!currentAudio) return 0;
 
-    // ✅ 直接基于对象匹配，而不是 id
+    // Find the index of the current audio in the playlist
     const currentIndex = playlist.findIndex(item => item === currentAudio);
     if (currentIndex === -1) return 0;
 
@@ -30,28 +27,28 @@ const Playlist = ({ playlist, setPlaylist, onPlay, currentAudio, leftDuration, o
     return remainingTime;
   };
 
-
-  // 🎯 计算总剩余时间（当前音频剩余时间 + 后续音频总时间）
+  // Total remaining time (current audio's remaining time + remaining playlist time)
   const totalRemainingTime = leftDuration + calculateRemainingTime();
 
-  // 🎯 在控制台中显示总剩余时间
+  // Log total remaining time to the console
   useEffect(() => {
-    console.log(`总剩余时间: ${totalRemainingTime} 秒`);
+    console.log(`Total Remaining Time: ${totalRemainingTime} seconds`);
   }, [currentAudio, playlist, leftDuration]);
-   // 🎯 实时将总剩余时间传回父组件
-   useEffect(() => {
+
+  // Pass total remaining time back to the parent component
+  useEffect(() => {
     if (typeof onTotalRemainingTime === "function") {
       onTotalRemainingTime(totalRemainingTime);
     }
-    console.log(`总剩余时间: ${totalRemainingTime} 秒`);
+    console.log(`Total Remaining Time: ${totalRemainingTime} seconds`);
   }, [totalRemainingTime]);
-  
 
-  // 🎯 允许 Playlist 内部拖动排序
+  // Handle drag start
   const handleDragStart = (index) => {
     setDraggingItem(playlist[index]);
   };
 
+  // Handle drag enter to determine the position (above or below)
   const handleDragEnter = (e, index) => {
     const boundingRect = e.currentTarget.getBoundingClientRect();
     const middleY = boundingRect.top + boundingRect.height / 2;
@@ -61,16 +58,17 @@ const Playlist = ({ playlist, setPlaylist, onPlay, currentAudio, leftDuration, o
     setDragOverPosition(dragPosition);
   };
 
-  // 🎯 处理拖放结束，更新播放列表
+  // Handle drag end
   const handleDragEnd = () => {
     setDraggingItem(null);
     setDragOverIndex(null);
     setDragOverPosition(null);
   };
 
+  // Handle drop event to update the playlist
   const handleDrop = (event, dropIndex) => {
     event.preventDefault();
-  
+
     let audioData;
     try {
       const data = event.dataTransfer.getData('audio');
@@ -80,59 +78,44 @@ const Playlist = ({ playlist, setPlaylist, onPlay, currentAudio, leftDuration, o
       console.error("🚨 JSON Parsing Failed:", error);
       return;
     }
-  
+
     if (!audioData?.id) {
       console.error("🚨 Invalid Dragged Data!", audioData);
       return;
     }
-  
-    setPlaylist((prev) => {
 
+    setPlaylist((prev) => {
       console.log("🔍 Previous Playlist:", JSON.stringify(prev, null, 2));
-  
+
       let newList = Array.isArray(prev) ? [...prev] : Array(MAX_PLAYLIST_SIZE).fill(null);
 
       while (newList.length < MAX_PLAYLIST_SIZE) {
         newList.push(null);
       }
-  
+
       newList[dropIndex] = audioData;
       console.log("🎯 Updated Playlist:", JSON.stringify(newList, null, 2));
-  
-      return [...newList]; // ✅ Returning a fresh array to trigger re-render
+
+      return [...newList]; // Return a fresh array to trigger re-render
     });
-  
+
     setDragOverIndex(null);
   };
 
-  // 🎯 删除音频，并确保不会自动播放
-  // const handleRemove = (audioId) => {
-  //   setPlaylist((prev) => {
-  //     const newList = prev.map((item) => (item && item.id === audioId ? null : item));
-
-  //     // 🛑 如果删除的音频是当前播放的音频，停止播放
-  //     if (currentAudio && currentAudio.id === audioId) {
-  //       onPlay(null); // 停止播放
-  //     }
-
-  //     return newList;
-  //   });
-  // };
+  // Handle removing an audio item
   const handleRemove = (index) => {
     setPlaylist((prev) => {
       const newList = [...prev];
-      newList[index] = null; // 只删除当前索引位置的音频
-  
-      // 🛑 如果删除的音频是当前播放的音频，停止播放
+      newList[index] = null; // Remove the audio at the current index
+
+      // If the removed audio is currently playing, stop playback
       if (currentAudio && currentAudio.id === prev[index]?.id) {
         onPlay(null);
       }
-  
+
       return newList;
     });
   };
-  
-
 
   return (
     <div style={styles.playlist}>
@@ -145,13 +128,11 @@ const Playlist = ({ playlist, setPlaylist, onPlay, currentAudio, leftDuration, o
           onDragStart={handleDragStart}
           onDragEnter={handleDragEnter}
           onDragEnd={handleDragEnd}
-          dragOverPosition={dragOverPosition} // 传递位置状态
+          dragOverPosition={dragOverPosition} // Pass drag position state
           onDrop={handleDrop}
           isDraggingOver={index === dragOverIndex}
-          onPlay={onPlay} // 🔥 Pass play function
-          //isPlaying={currentAudio && playlist[index]?.id === currentAudio.id} // ✅ Only highlight when playing  // ✅ Compare with current playing audio
-          isPlaying={currentAudio && playlist[index] === currentAudio} // ✅ 只高亮当前播放的音频
-
+          onPlay={onPlay}
+          isPlaying={currentAudio && playlist[index] === currentAudio} // Highlight the currently playing audio
         />
       ))}
     </div>
@@ -162,9 +143,7 @@ const styles = {
   playlist: {
     width: '100%',
     minHeight: '250px',
-    //border: '2px solid #bbb',
     padding: '10px',
-    //borderRadius: '7px',
     borderRadius: '10px 10px 0 0',
     backgroundColor: '#f9f9f9',
     textAlign: 'center',
