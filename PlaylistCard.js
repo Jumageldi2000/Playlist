@@ -5,6 +5,7 @@ import { DeleteOutlined, DragOutlined } from '@ant-design/icons';
 const PlaylistCard = ({ item, index, onRemove, onDragStart, onDragEnter, onDragEnd, onDrop, isDraggingOver, dragOverPosition, onPlay, isPlaying }) => {
   const [isHovered, setIsHovered] = useState(false);
 
+  // Format time from seconds to MM:SS
   const formatTime = (seconds) => {
     if (!seconds || isNaN(seconds)) return "0:00";
     const minutes = Math.floor(seconds / 60);
@@ -55,7 +56,7 @@ const PlaylistCard = ({ item, index, onRemove, onDragStart, onDragEnter, onDragE
           </div>
         </div>
       ) : (
-        <span style={styles.emptySlotText}>拖动音频到这里</span>
+        <span style={styles.emptySlotText}>Drag audio here</span>
       )}
     </div>
   );
