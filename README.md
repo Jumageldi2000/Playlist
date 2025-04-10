@@ -8,7 +8,7 @@
 
 🛠️ Key features
 
-📁 Translated code comments from Chinese to English
+📁 
 
 🎧 Playlist System - React Component (Legacy)
 
